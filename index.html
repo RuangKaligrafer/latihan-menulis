@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latihan Menulis - Ruang Kaligrafer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 20px;
+    }
+    .canvas-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 2px solid #87cefa;
+      border-radius: 10px;
+      overflow: hidden;
+      width: 800px;
+      height: 1132px;
+    }
+    #backgroundImage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+      pointer-events: none;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    .tools {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    .tools > * {
+      background: #87cefa;
+      border: none;
+      border-radius: 5px;
+      padding: 8px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tools input[type=range] {
+      width: 60px;
+    }
+    .tools input[type=number] {
+      width: 45px;
+      margin-left: 5px;
+    }
+    .icon {
+      font-size: 18px;
+      vertical-align: middle;
+    }
+    #colorPicker {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: none;
+      padding: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="canvas-container" id="canvasContainer">
+    <img id="backgroundImage" src="./2.png">
+    <canvas id="canvas" width="800" height="1132"></canvas>
+  </div>
+
+  <div class="tools">
+    <input type="color" id="colorPicker" title="Warna Pena">
+
+    <label>
+      <i class="fas fa-pen icon"></i>
+      <input type="range" id="sizeSlider" min="1" max="20" value="3">
+      <input type="number" id="sizeValue" min="1" max="20" value="3">
+    </label>
+
+    <label>
+      <i class="fas fa-image icon"></i>
+      <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="1">
+      <input type="number" id="opacityValue" min="0" max="1" step="0.01" value="1">
+    </label>
+
+    <button id="undoBtn"><i class="fas fa-rotate-left icon"></i></button>
+    <button id="redoBtn"><i class="fas fa-rotate-right icon"></i></button>
+    <button onclick="clearCanvas()"><i class="fas fa-trash icon"></i></button>
+    <button onclick="downloadCanvas()"><i class="fas fa-download icon"></i></button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const backgroundImage = document.getElementById('backgroundImage');
+
+    let painting = false;
+    let penColor = '#000000';
+    let penSize = 3;
+    let history = [];
+    let historyStep = -1;
+
+    const colorPicker = document.getElementById('colorPicker');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeValue = document.getElementById('sizeValue');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityValue = document.getElementById('opacityValue');
+
+    function updateOpacity(val) {
+      backgroundImage.style.opacity = val;
+      opacitySlider.value = val;
+      opacityValue.value = val;
+    }
+
+    function startPosition(e) {
+      painting = true;
+      draw(e);
+    }
+
+    function endPosition() {
+      painting = false;
+      ctx.beginPath();
+      saveState();
+    }
+
+    function draw(e) {
+      if (!painting) return;
+      const rect = canvas.getBoundingClientRect();
+      ctx.lineWidth = penSize;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = penColor;
+      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+
+    function saveState() {
+      if (historyStep < history.length - 1) {
+        history = history.slice(0, historyStep + 1);
+      }
+      history.push(canvas.toDataURL());
+      historyStep++;
+    }
+
+    function undo() {
+      if (historyStep > 0) {
+        historyStep--;
+        const img = new Image();
+        img.src = history[historyStep];
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+      }
+    }
+
+    function redo() {
+      if (historyStep < history.length - 1) {
+        historyStep++;
+        const img = new Image();
+        img.src = history[historyStep];
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+      }
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      saveState();
+    }
+
+    function downloadCanvas() {
+      const combinedCanvas = document.createElement('canvas');
+      combinedCanvas.width = canvas.width;
+      combinedCanvas.height = canvas.height;
+      const combinedCtx = combinedCanvas.getContext('2d');
+      combinedCtx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      combinedCtx.drawImage(canvas, 0, 0);
+      const link = document.createElement('a');
+      link.download = 'latihan-menulis.png';
+      link.href = combinedCanvas.toDataURL();
+      link.click();
+    }
+
+    colorPicker.addEventListener('input', e => penColor = e.target.value);
+    sizeSlider.addEventListener('input', e => {
+      penSize = e.target.value;
+      sizeValue.value = e.target.value;
+    });
+    sizeValue.addEventListener('input', e => {
+      penSize = e.target.value;
+      sizeSlider.value = e.target.value;
+    });
+    opacitySlider.addEventListener('input', e => updateOpacity(e.target.value));
+    opacityValue.addEventListener('input', e => updateOpacity(e.target.value));
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
+
+    canvas.addEventListener('mousedown', startPosition);
+    canvas.addEventListener('mouseup', endPosition);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseout', endPosition);
+
+    window.onload = () => {
+      updateOpacity(1);
+      saveState();
+    };
+  </script>
+</body>
+</html>
